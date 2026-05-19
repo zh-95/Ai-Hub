@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Hub - Dashboard ispettore #1</title>
+  <style>
+    :root {
+      --bg: #1b1b1b;
+      --page: #0d0d0d;
+      --surface: #232321;
+      --surface-2: #30302e;
+      --border: #4a4a45;
+      --text: #f4f4f1;
+      --muted: #b8b3aa;
+      --subtle: #8f8a80;
+      --green: #31d06d;
+      --blue: #3b82f6;
+      --amber: #f5a524;
+      --red: #f87171;
+      --purple: #a78bfa;
+      --shadow: 0 18px 48px rgba(0, 0, 0, .28);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(59, 130, 246, .09), transparent 28rem),
+        radial-gradient(circle at 100% 10%, rgba(49, 208, 109, .06), transparent 28rem),
+        linear-gradient(180deg, var(--bg), #121212 48%, var(--page));
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    button, select { font: inherit; }
+    .shell { width: min(1200px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 44px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 32px; line-height: 1.08; letter-spacing: 0; }
+    h2 { margin: 0 0 12px; font-size: 20px; letter-spacing: 0; }
+    h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: 0; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); max-width: 760px; }
+    .stamp { min-width: 270px; color: var(--muted); text-align: right; }
+    .stamp strong { display: block; color: var(--text); font-size: 18px; }
+    .notice {
+      display: grid;
+      gap: 4px;
+      margin: 18px 0;
+      padding: 13px 15px;
+      color: #dbeaff;
+      border: 1px solid rgba(59, 130, 246, .36);
+      background: rgba(23, 43, 77, .68);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 0 14px;
+      background: linear-gradient(180deg, rgba(27, 27, 27, .96), rgba(27, 27, 27, .78));
+      backdrop-filter: blur(10px);
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      min-height: 42px;
+      padding: 10px 14px;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(36, 36, 35, .86);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab.active {
+      color: var(--text);
+      border-color: rgba(49, 208, 109, .55);
+      background: var(--surface-2);
+      box-shadow: inset 0 0 0 1px rgba(49, 208, 109, .18);
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .grid { display: grid; gap: 16px; }
+    .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 4px 0 20px; }
+    .split { grid-template-columns: 1.1fr .9fr; align-items: start; }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .roadmap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric, .card, .table-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(48, 48, 46, .98), rgba(35, 35, 34, .98));
+      box-shadow: var(--shadow);
+    }
+    .metric { min-height: 128px; display: grid; align-content: space-between; padding: 18px; }
+    .card, .table-card { padding: 18px; }
+    .label, .eyebrow {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .value { margin-top: 8px; font-size: 42px; line-height: 1; font-weight: 850; }
+    .note, .muted { color: var(--muted); }
+    .good { color: var(--green); }
+    .info { color: var(--blue); }
+    .warn { color: var(--amber); }
+    .bad { color: var(--red); }
+    .purple { color: var(--purple); }
+    .row {
+      display: grid;
+      grid-template-columns: 170px 1fr 76px 130px;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+    }
+    .phase-row { grid-template-columns: 118px 1fr 76px 118px; }
+    .row:first-of-type { border-top: 0; }
+    .path, .phase-name {
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: 750;
+    }
+    .bar { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(0, 0, 0, .28); }
+    .fill { width: var(--p); height: 100%; border-radius: inherit; background: var(--green); }
+    .fill.blue { background: var(--blue); }
+    .fill.amber { background: var(--amber); }
+    .fill.red { background: var(--red); }
+    .pct { font-weight: 850; text-align: right; }
+    .pill {
+      justify-self: end;
+      display: inline-flex;
+      min-height: 30px;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 11px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      border-radius: 999px;
+    }
+    .pill.good { color: var(--green); background: rgba(49, 208, 109, .12); }
+    .pill.info { color: #82b5ff; background: rgba(59, 130, 246, .14); }
+    .pill.warn { color: var(--amber); background: rgba(245, 165, 36, .14); }
+    .pill.bad { color: var(--red); background: rgba(248, 113, 113, .14); }
+    .pill.purple { color: var(--purple); background: rgba(167, 139, 250, .14); }
+    .list { display: grid; gap: 10px; margin-top: 12px; }
+    .item {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .17);
+    }
+    .item strong { display: block; margin-bottom: 4px; }
+    .item span { color: var(--muted); }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+    select {
+      min-height: 40px;
+      padding: 9px 10px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #171717;
+    }
+    .toggle-series {
+      min-height: 38px;
+      padding: 8px 12px;
+      color: var(--muted);
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .22);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .toggle-series.active[data-series="used"] { color: #dbeafe; border-color: rgba(96, 165, 250, .75); background: rgba(96, 165, 250, .18); }
+    .toggle-series.active[data-series="estimate"] { color: #fee2e2; border-color: rgba(248, 113, 113, .75); background: rgba(248, 113, 113, .17); }
+    .chart-wrap {
+      min-height: 286px;
+      margin-top: 12px;
+      padding: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .18);
+    }
+    .token-svg { width: 100%; height: 260px; display: block; }
+    .chart-grid-line { stroke: rgba(255, 255, 255, .12); stroke-width: 1; }
+    .chart-axis-label { fill: var(--muted); font-size: 12px; }
+    .chart-line-used { fill: none; stroke: #60a5fa; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-line-estimate { fill: none; stroke: #f87171; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-dot-used { fill: #60a5fa; stroke: #0b0b0b; stroke-width: 2; }
+    .chart-dot-estimate { fill: #f87171; stroke: #0b0b0b; stroke-width: 2; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 8px; text-align: left; vertical-align: top; border-top: 1px solid rgba(255, 255, 255, .08); }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .question-card {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, .09);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .16);
+    }
+    .question-card.blocker { border-color: rgba(248, 113, 113, .38); background: rgba(65, 21, 21, .28); }
+    .question-card.decision { border-color: rgba(245, 165, 36, .36); background: rgba(70, 48, 14, .22); }
+    .agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .agent-card { min-height: 170px; }
+    .agent-card .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .footer-note { margin-top: 18px; color: var(--subtle); font-size: 13px; }
+    @media (max-width: 900px) {
+      .shell { width: min(100% - 18px, 760px); padding-top: 18px; }
+      .topbar { display: grid; gap: 10px; }
+      .stamp { min-width: 0; text-align: left; }
+      h1 { font-size: 27px; }
+      .metrics, .split, .three, .roadmap-grid, .agent-grid { grid-template-columns: 1fr; }
+      .metric { min-height: 116px; }
+      .value { font-size: 36px; }
+      .row { grid-template-columns: 1fr; gap: 8px; padding: 14px 0; }
+      .pct, .pill { justify-self: start; text-align: left; }
+      .chart-wrap { min-height: 258px; padding: 10px; }
+      .token-svg { height: 232px; }
+      .table-scroll { overflow-x: auto; }
+      table { min-width: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>AI Hub &mdash; Dashboard ispettore</h1>
+        <p class="subtitle">Ispezione #1 — prima analisi completa del progetto. App desktop Electron frameless con sfera glassmorphism, AI locale (Ollama) e filesystem. Setup e scaffolding completati, Workers non ancora avviati. 2 BLOCCANTI da risolvere prima di procedere.</p>
+      </div>
+      <div class="stamp"><strong>19 mag 2026 &mdash; Ispezione #1</strong>Europa/Roma &mdash; dashboard locale</div>
+    </header>
+
+    <section class="notice">
+      <b>Root operativa rilevata:</b> Agent-Organization-Framework\ai-hub\
+      <span>Worktree pulito a inizio ispezione. Tutti i 23 file stub attesi sono presenti e verificati. WORK_LOG di ui/, ai/, core/ privi di entries: comportamento atteso (nessun Worker ancora avviato).</span>
+    </section>
+
+    <nav class="tabs" aria-label="Dashboard panels">
+      <button class="tab active" data-panel="status" type="button">Stato progetto</button>
+      <button class="tab" data-panel="roadmap" type="button">Roadmap F0&ndash;F7</button>
+      <button class="tab" data-panel="tokens" type="button">Consumo token</button>
+      <button class="tab" data-panel="agents" type="button">Agenti</button>
+      <button class="tab" data-panel="blockers" type="button">Blocchi</button>
+    </nav>
+
+    <!-- ══════════════════════════════════════════════
+         PANNELLO: STATO PROGETTO
+    ══════════════════════════════════════════════ -->
+    <section class="panel active" id="panel-status">
+      <div class="grid metrics">
+        <div class="metric"><div><div class="label">Completamento</div><div class="value warn">5%</div></div><div class="note">scaffold F0 completo, zero codice funzionante</div></div>
+        <div class="metric"><div><div class="label">File sorgente</div><div class="value">23</div></div><div class="note">.ts / .html / .css — tutti stub</div></div>
+        <div class="metric"><div><div class="label">Verifiche</div><div class="value warn">STUB</div></div><div class="note">typecheck non eseguibile su file vuoti</div></div>
+        <div class="metric"><div><div class="label">Blocchi veri</div><div class="value bad">2</div></div><div class="note">persistenza settings e drag frameless</div></div>
+      </div>
+
+      <div class="grid split">
+        <section class="card">
+          <h2>Moduli</h2>
+          <div class="row"><div class="path">root/</div><div class="bar"><div class="fill" style="--p:100%"></div></div><div class="pct">100%</div><div class="pill good">completo</div></div>
+          <div class="row"><div class="path">ui/src/</div><div class="bar"><div class="fill amber" style="--p:5%"></div></div><div class="pct">5%</div><div class="pill warn">stub (8 file)</div></div>
+          <div class="row"><div class="path">ai/src/</div><div class="bar"><div class="fill amber" style="--p:5%"></div></div><div class="pct">5%</div><div class="pill warn">stub (5 file)</div></div>
+          <div class="row"><div class="path">core/src/</div><div class="bar"><div class="fill amber" style="--p:5%"></div></div><div class="pct">5%</div><div class="pill warn">stub (9 file)</div></div>
+          <div class="row"><div class="path">WORK_LOG workers</div><div class="bar"><div class="fill red" style="--p:0%"></div></div><div class="pct">0%</div><div class="pill bad">nessuna entry</div></div>
+          <div class="row"><div class="path">proof_of_concept/</div><div class="bar"><div class="fill" style="--p:100%"></div></div><div class="pct">100%</div><div class="pill info">riferimento visivo</div></div>
+        </section>
+
+        <aside class="card">
+          <h2>Controllo ispettore</h2>
+          <div class="list">
+            <div class="item"><strong>Scaffold</strong><span>Struttura directory ai-hub/ completa: ui/, ai/, core/, reports/, arch/. Tutti i 23 file sorgente stub presenti come da INSPECTOR.md Step 5.</span></div>
+            <div class="item"><strong>WORK_LOG workers</strong><span>ui/, ai/ e core/ non hanno entries: Workers non ancora avviati. Comportamento atteso. Da monitorare alla prossima ispezione.</span></div>
+            <div class="item"><strong>Quality gate</strong><span>Typecheck e build non eseguibili: i file stub non contengono codice compilabile. Rieseguire dopo la prima sessione di ogni Worker.</span></div>
+            <div class="item"><strong>Regole progetto</strong><span>nodeIntegration:false e contextIsolation:true dichiarati in CLAUDE.md root. Da implementare in core/src/main.ts (stub presente).</span></div>
+            <div class="item"><strong>Rischio principale</strong><span>2 BLOCCANTI non risolti (drag frameless + persistenza) impediscono l'avvio di Worker UI e Worker Core. Risolvere prima di qualsiasi sessione Worker.</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         PANNELLO: ROADMAP F0–F7
+    ══════════════════════════════════════════════ -->
+    <section class="panel" id="panel-roadmap">
+      <div class="grid metrics">
+        <div class="metric"><div><div class="label">F0 — Fondazioni</div><div class="value good">100%</div></div><div class="note">scaffold, tsconfig, builder, stubs</div></div>
+        <div class="metric"><div><div class="label">Alpha runtime</div><div class="value warn">ATTESA</div></div><div class="note">Worker non avviati, blocchi attivi</div></div>
+        <div class="metric"><div><div class="label">RC readiness</div><div class="value bad">0%</div></div><div class="note">F1–F7 tutte da iniziare</div></div>
+        <div class="metric"><div><div class="label">Release risk</div><div class="value info">BASSA</div></div><div class="note">nuovo progetto, nessun debito tecnico</div></div>
+      </div>
+      <div class="grid roadmap-grid">
+        <section class="card">
+          <h2>Alpha 1 &mdash; Fondazioni (F0 + F2)</h2>
+          <div class="row phase-row"><div class="phase-name">F0</div><div>Setup scaffold: Electron, TypeScript, Vite, electron-builder, tsconfig, stubs, doc</div><div class="pct">100%</div><div class="pill good">completata</div></div>
+          <div class="row phase-row"><div class="phase-name">F2</div><div>Core main process: finestra frameless, preload, contextBridge, IPC base</div><div class="pct">0%</div><div class="pill bad">blocco</div></div>
+        </section>
+        <section class="card">
+          <h2>Alpha 2 &mdash; UI Renderer (F1)</h2>
+          <div class="row phase-row"><div class="phase-name">F1</div><div>UI fedele al proof of concept: sphere canvas, orbit, panels, floatButtons, statusbar, bridge IPC</div><div class="pct">0%</div><div class="pill bad">blocco</div></div>
+          <div class="row phase-row"><div class="phase-name">Dipendenza</div><div>Decisione drag frameless (CSS vs IPC) richiesta prima di avviare il Worker UI</div><div class="pct">&mdash;</div><div class="pill warn">in attesa</div></div>
+        </section>
+        <section class="card">
+          <h2>Beta 1 &mdash; Core Services (F3 + F4 + F5)</h2>
+          <div class="row phase-row"><div class="phase-name">F3</div><div>Storage: settings e annotazioni persistenti su disco (dipende da decisione persistenza)</div><div class="pct">0%</div><div class="pill warn">in attesa</div></div>
+          <div class="row phase-row"><div class="phase-name">F4</div><div>Filesystem: scansione cartella progetto, parsing WORK_LOG e OPEN_QUESTIONS .md</div><div class="pct">0%</div><div class="pill warn">in attesa</div></div>
+          <div class="row phase-row"><div class="phase-name">F5</div><div>AI integration: Ollama locale + CLI generico + OpenAI opzionale</div><div class="pct">0%</div><div class="pill warn">in attesa</div></div>
+        </section>
+        <section class="card">
+          <h2>Release Candidate (F6 + F7)</h2>
+          <div class="row phase-row"><div class="phase-name">F6</div><div>Wiring completo UI&harr;Core&harr;AI: tutti i pannelli funzionanti end-to-end</div><div class="pct">0%</div><div class="pill info">da iniziare</div></div>
+          <div class="row phase-row"><div class="phase-name">F7</div><div>Build Windows: .exe + installer NSIS, test su macchina reale</div><div class="pct">0%</div><div class="pill info">da iniziare</div></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         PANNELLO: CONSUMO TOKEN
+    ══════════════════════════════════════════════ -->
+    <section class="panel" id="panel-tokens">
+      <div class="grid metrics" id="token-metrics"></div>
+      <section class="table-card">
+        <h2>Consumo stimato per sessione</h2>
+        <p class="muted">Valori in migliaia di token stimati dai WORK_LOG e dalla classificazione ispettiva. Non sono dati di billing reale.</p>
+        <div class="toolbar">
+          <label class="muted" for="moduleFilter">Modulo</label><select id="moduleFilter"></select>
+          <label class="muted" for="phaseFilter">Fase</label><select id="phaseFilter"></select>
+          <button class="toggle-series active" data-series="used" type="button">Usati</button>
+          <button class="toggle-series active" data-series="estimate" type="button">Stimati</button>
+        </div>
+        <div class="chart-wrap" id="token-chart" aria-label="Grafico consumo token"></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Sessione</th><th>Modulo</th><th>Fase</th><th>Input</th><th>Output</th><th>Verifica</th><th>Totale</th></tr></thead>
+            <tbody id="tokenRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         PANNELLO: AGENTI
+    ══════════════════════════════════════════════ -->
+    <section class="panel" id="panel-agents">
+      <div class="grid metrics" id="agent-metrics"></div>
+      <div class="grid agent-grid" id="agentCards"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════
+         PANNELLO: BLOCCHI
+    ══════════════════════════════════════════════ -->
+    <section class="panel" id="panel-blockers">
+      <div class="grid metrics">
+        <div class="metric"><div><div class="label">BLOCCANTI</div><div class="value bad">2</div></div><div class="note">Worker UI e Core fermi senza risposta</div></div>
+        <div class="metric"><div><div class="label">Decisioni aperte</div><div class="value warn">5</div></div><div class="note">API key, CLI, prompt AI, file picker, parser .md</div></div>
+        <div class="metric"><div><div class="label">Prossima mossa</div><div class="value info">F0+F2</div></div><div class="note">risolvere blocchi poi avviare Worker Core</div></div>
+        <div class="metric"><div><div class="label">Release risk</div><div class="value info">BASSA</div></div><div class="note">progetto agli inizi, zero debito tecnico</div></div>
+      </div>
+      <div class="grid three">
+        <section class="question-card blocker">
+          <span class="pill bad">BLOCCANTE</span>
+          <h2>1. Persistenza settings</h2>
+          <p>Usare <code>electron-store</code> (npm, schema validation, ~120KB extra) o JSON manuale con <code>fs.promises</code> (zero-dep, ma pi&ugrave; codice)?</p>
+          <p class="muted">Sblocca Worker Core su F3 (storage/settings.ts). Senza questa decisione il Worker Core non pu&ograve; iniziare.</p>
+        </section>
+        <section class="question-card blocker">
+          <span class="pill bad">BLOCCANTE</span>
+          <h2>2. Drag finestra frameless</h2>
+          <p>Usare <code>-webkit-app-region: drag</code> CSS (blocca click sulle drag region) o <code>ipcRenderer.send('window:start-drag')</code> + coordinate mouse?</p>
+          <p class="muted">Blocca sia Worker UI (F1) che Worker Core (F2). Devono essere allineati. Decisione cross-modulo &mdash; va presa dal proprietario.</p>
+        </section>
+        <section class="question-card decision">
+          <span class="pill warn">DECISIONE</span>
+          <h2>3. Cifratura API key</h2>
+          <p>Base64 (reversibile, zero-deps, dichiaratamente temporaneo) o <code>safeStorage</code> Electron (cifra con OS, ma richiede app firmata su Windows)?</p>
+          <p class="muted">In v1 l'app non &egrave; firmata. Base64 &egrave; la misura consapevole temporanea. Confermare o cambiare approccio.</p>
+        </section>
+        <section class="question-card decision">
+          <span class="pill warn">DECISIONE</span>
+          <h2>4. Provider CLI e prompt AI</h2>
+          <p>CLI: comando come stringa unica (<code>"claude --print"</code>) o array (<code>["claude","--print"]</code>)? Prompt AI: hard-coded o configurabile dall'utente?</p>
+          <p class="muted">Array &egrave; pi&ugrave; sicuro (<code>execFile</code> vs <code>exec</code>). Prompt configurabile &egrave; pi&ugrave; flessibile ma richiede UI extra. Sblocca Worker AI su F5.</p>
+        </section>
+        <section class="question-card decision">
+          <span class="pill warn">DECISIONE</span>
+          <h2>5. Parser .md e file picker</h2>
+          <p>Parser: regex semplici (zero-dep, sufficienti per struttura fissa) o libreria <code>marked</code> (~60KB, pi&ugrave; robusta)? File picker: IPC <code>dialog.showOpenDialog</code> o <code>&lt;input webkitdirectory&gt;</code>?</p>
+          <p class="muted">Regex raccomandate per v1. IPC raccomandata per il picker (pi&ugrave; robusto su directory grandi). Confermare per sbloccare F4 e F1.</p>
+        </section>
+        <section class="question-card">
+          <span class="pill info">PRIORITA'</span>
+          <h2>6. Prossimo lavoro tecnico</h2>
+          <p>Sequenza consigliata dopo le risposte: 1&raquo; avviare Worker Core su F2, 2&raquo; avviare Worker UI su F1, 3&raquo; avviare Worker AI su F5, 4&raquo; Worker Core su F3+F4.</p>
+          <p class="muted">F0 &egrave; solida. Worker Core e Worker UI possono partire in parallelo una volta risolti i 2 BLOCCANTI. Worker AI dipende solo da decisioni minori.</p>
+        </section>
+      </div>
+    </section>
+
+    <p class="footer-note">Generato come report statico locale. Stime aggiornate al 19 maggio 2026, Ispezione #1. Token e ripartizioni sono stime operative, non billing reale.</p>
+  </main>
+
+  <script>
+    /* ── Tab navigation ───────────────────────────────────── */
+    const panels = document.querySelectorAll('.panel');
+    const tabs = document.querySelectorAll('.tab');
+    function activatePanel(tab) {
+      const target = tab.dataset.panel;
+      tabs.forEach((item) => item.classList.toggle('active', item === tab));
+      panels.forEach((panel) => panel.classList.toggle('active', panel.id === `panel-${target}`));
+    }
+    function bindTap(element, handler) {
+      element.addEventListener('click', (event) => { event.preventDefault(); handler(event); });
+      element.addEventListener('touchend', (event) => { event.preventDefault(); handler(event); }, { passive: false });
+    }
+    tabs.forEach((tab) => bindTap(tab, () => activatePanel(tab)));
+
+    /* ── Token data ───────────────────────────────────────── */
+    const tokenRecords = [
+      {
+        date: '2026-05-19',
+        label: 'Setup AI Hub (Architect)',
+        module: 'root',
+        phase: 'F0/scaffold',
+        estimate: 8.0,
+        input: 3.5,
+        output: 3.5,
+        verify: 2.0
+      },
+      {
+        date: '2026-05-19',
+        label: 'Ispezione #1 (Inspector)',
+        module: 'root',
+        phase: 'governance',
+        estimate: 7.5,
+        input: 3.0,
+        output: 4.2,
+        verify: 1.3
+      }
+    ].map((r) => ({ ...r, total: +(r.input + r.output + r.verify).toFixed(1) }));
+
+    const chartVisible = { used: true, estimate: true };
+    const fmt = (value) => `${value.toFixed(1)}k`;
+
+    function populateFilters() {
+      const moduleFilter = document.getElementById('moduleFilter');
+      const phaseFilter = document.getElementById('phaseFilter');
+      moduleFilter.innerHTML = ['Tutti', ...new Set(tokenRecords.map((r) => r.module))].map((v) => `<option value="${v}">${v}</option>`).join('');
+      phaseFilter.innerHTML = ['Tutte', ...new Set(tokenRecords.map((r) => r.phase))].map((v) => `<option value="${v}">${v}</option>`).join('');
+      moduleFilter.addEventListener('change', renderTokens);
+      phaseFilter.addEventListener('change', renderTokens);
+      document.querySelectorAll('.toggle-series').forEach((button) => {
+        bindTap(button, () => {
+          const series = button.dataset.series;
+          chartVisible[series] = !chartVisible[series];
+          if (!chartVisible.used && !chartVisible.estimate) chartVisible[series] = true;
+          button.classList.toggle('active', chartVisible[series]);
+          renderTokens();
+        });
+      });
+    }
+
+    function currentTokenRecords() {
+      const m = document.getElementById('moduleFilter').value;
+      const p = document.getElementById('phaseFilter').value;
+      return tokenRecords.filter((r) => (m === 'Tutti' || r.module === m) && (p === 'Tutte' || r.phase === p));
+    }
+
+    function renderTokens() {
+      const rows = currentTokenRecords();
+      const total = rows.reduce((s, r) => s + r.total, 0);
+      const estimated = rows.reduce((s, r) => s + r.estimate, 0);
+      const delta = total - estimated;
+      const avg = rows.length ? total / rows.length : 0;
+      const input = rows.reduce((s, r) => s + r.input, 0);
+      const output = rows.reduce((s, r) => s + r.output, 0);
+      const verify = rows.reduce((s, r) => s + r.verify, 0);
+      document.getElementById('token-metrics').innerHTML =
+        `<div class="metric"><div><div class="label">Token usati</div><div class="value info">${fmt(total)}</div></div><div class="note">somma consuntivi filtrati</div></div>` +
+        `<div class="metric"><div><div class="label">Token stimati</div><div class="value bad">${fmt(estimated)}</div></div><div class="note">stima iniziale WORK_LOG</div></div>` +
+        `<div class="metric"><div><div class="label">Delta</div><div class="value ${delta > 0 ? 'warn' : 'good'}">${delta >= 0 ? '+' : ''}${fmt(delta)}</div></div><div class="note">usati meno stimati</div></div>` +
+        `<div class="metric"><div><div class="label">Media/sessione</div><div class="value good">${fmt(avg)}</div></div><div class="note">input ${fmt(input)} / output ${fmt(output)} / verifica ${fmt(verify)}</div></div>`;
+      renderTokenChart(rows);
+      document.getElementById('tokenRows').innerHTML = rows.map((r) =>
+        `<tr><td>${r.date}</td><td>${r.label}</td><td>${r.module}</td><td>${r.phase}</td><td class="num">${fmt(r.input)}</td><td class="num">${fmt(r.output)}</td><td class="num">${fmt(r.verify)}</td><td class="num"><strong>${fmt(r.total)}</strong><br><span class="muted">stim. ${fmt(r.estimate)}</span></td></tr>`
+      ).join('');
+    }
+
+    function renderTokenChart(rows) {
+      const chart = document.getElementById('token-chart');
+      if (!rows.length) {
+        chart.innerHTML = '<p class="muted">Nessuna sessione nel filtro corrente.</p>';
+        return;
+      }
+      const width = 860;
+      const height = 260;
+      const pad = { left: 54, right: 24, top: 22, bottom: 42 };
+      const chartW = width - pad.left - pad.right;
+      const chartH = height - pad.top - pad.bottom;
+      const values = rows.flatMap((r) => [r.total, r.estimate]);
+      const max = Math.max(...values, 1) * 1.12;
+      const x = (index) => pad.left + (rows.length === 1 ? chartW / 2 : (index / (rows.length - 1)) * chartW);
+      const y = (value) => pad.top + chartH - (value / max) * chartH;
+      const pathFor = (key) => rows.map((r, index) => `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(1)} ${y(r[key]).toFixed(1)}`).join(' ');
+      const grid = [0, .25, .5, .75, 1].map((step) => {
+        const gy = pad.top + chartH - chartH * step;
+        return `<line class="chart-grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${gy}" y2="${gy}"></line><text class="chart-axis-label" x="8" y="${gy + 4}">${fmt(max * step)}</text>`;
+      }).join('');
+      const labels = rows.map((r, index) => `<text class="chart-axis-label" text-anchor="middle" x="${x(index)}" y="${height - 12}">${r.label.slice(0, 20)}</text>`).join('');
+      const used = chartVisible.used
+        ? `<path class="chart-line-used" d="${pathFor('total')}"></path>${rows.map((r, index) => `<circle class="chart-dot-used" cx="${x(index)}" cy="${y(r.total)}" r="5"><title>${r.label}: usati ${fmt(r.total)}</title></circle>`).join('')}`
+        : '';
+      const estimate = chartVisible.estimate
+        ? `<path class="chart-line-estimate" d="${pathFor('estimate')}"></path>${rows.map((r, index) => `<circle class="chart-dot-estimate" cx="${x(index)}" cy="${y(r.estimate)}" r="5"><title>${r.label}: stimati ${fmt(r.estimate)}</title></circle>`).join('')}`
+        : '';
+      chart.innerHTML = `<svg class="token-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Token usati e token stimati per sessione">${grid}${labels}${estimate}${used}</svg><div class="legend-row"><span class="pill info">blu: token usati</span><span class="pill bad">rosso: token stimati</span><span class="muted">Usa i due pulsanti per mostrare una serie o entrambe.</span></div>`;
+    }
+
+    /* ── Agents data ──────────────────────────────────────── */
+    const agents = [
+      {
+        name: 'Architect',
+        area: 'Governance',
+        status: 'completato',
+        sessions: 1,
+        tokens: 9.0,
+        completion: 100,
+        latest: 'Setup completo: scaffold, tsconfig, electron-builder, tutti gli stub, CLAUDE.md, AGENTS.md, INSPECTOR.md, HR.md',
+        open: 'nessuno — fase F0 conclusa'
+      },
+      {
+        name: 'Inspector',
+        area: 'Governance',
+        status: 'attivo',
+        sessions: 1,
+        tokens: 8.5,
+        completion: 100,
+        latest: 'Ispezione #1: prima analisi completa, dashboard prodotta, blocchi e roadmap documentati',
+        open: 'git push da autorizzare esplicitamente dal proprietario'
+      },
+      {
+        name: 'Worker UI',
+        area: 'Renderer (ui/)',
+        status: 'in attesa',
+        sessions: 0,
+        tokens: 0,
+        completion: 0,
+        latest: 'Non avviato. Stub pronti: sphere.ts, orbit.ts, panels.ts, floatButtons.ts, statusbar.ts, bridge.ts',
+        open: 'BLOCCANTE: drag frameless + DECISIONE: file picker cartella'
+      },
+      {
+        name: 'Worker AI',
+        area: 'AI Integration (ai/)',
+        status: 'in attesa',
+        sessions: 0,
+        tokens: 0,
+        completion: 0,
+        latest: 'Non avviato. Stub pronti: index.ts, types.ts, providers/ollama.ts, providers/openai.ts, providers/cli.ts',
+        open: 'DECISIONE: provider CLI (array vs stringa) + prompt AI sistema'
+      },
+      {
+        name: 'Worker Core',
+        area: 'Main Process (core/)',
+        status: 'in attesa',
+        sessions: 0,
+        tokens: 0,
+        completion: 0,
+        latest: 'Non avviato. Stub pronti: main.ts, preload.ts, window.ts, ipc.ts, storage/*.ts, filesystem/*.ts',
+        open: 'BLOCCANTE: persistenza settings + BLOCCANTE: drag frameless'
+      },
+      {
+        name: 'HR',
+        area: 'Governance',
+        status: 'non avviato',
+        sessions: 0,
+        tokens: 0,
+        completion: 0,
+        latest: 'Nessun WORK_LOG da processare. Avviare dopo le prime sessioni Worker.',
+        open: 'avviare quando WORK_LOG root supera 300-400 righe'
+      }
+    ];
+
+    function renderAgents() {
+      const sessions = agents.reduce((s, a) => s + a.sessions, 0);
+      const tokens = agents.reduce((s, a) => s + a.tokens, 0);
+      const active = agents.filter((a) => !['bloccato', 'in attesa', 'non avviato'].includes(a.status)).length;
+      document.getElementById('agent-metrics').innerHTML =
+        `<div class="metric"><div><div class="label">Agenti tracciati</div><div class="value info">${agents.length}</div></div><div class="note">governance + workers + HR</div></div>` +
+        `<div class="metric"><div><div class="label">Sessioni</div><div class="value">${sessions}</div></div><div class="note">somma stime WORK_LOG</div></div>` +
+        `<div class="metric"><div><div class="label">Token usati</div><div class="value good">${fmt(tokens)}</div></div><div class="note">stima operativa totale</div></div>` +
+        `<div class="metric"><div><div class="label">Attivi</div><div class="value warn">${active}</div></div><div class="note">non bloccati / in attesa</div></div>`;
+      document.getElementById('agentCards').innerHTML = agents.map((a) => {
+        const cls =
+          a.status === 'bloccato' || a.status === 'in attesa' ? 'warn' :
+          a.status === 'non avviato' ? 'bad' :
+          a.status === 'completato' || a.status === 'attivo' ? 'good' : 'info';
+        return `<section class="card agent-card">` +
+          `<div class="eyebrow">${a.area}</div>` +
+          `<h2>${a.name}</h2>` +
+          `<div class="meta">` +
+          `<span class="pill ${cls}">${a.status}</span>` +
+          `<span class="pill purple">${a.completion}%</span>` +
+          `<span class="pill info">${fmt(a.tokens)} / ${a.sessions} sess.</span>` +
+          `</div>` +
+          `<div class="list">` +
+          `<div class="item"><strong>Ultimo avanzamento</strong><span>${a.latest}</span></div>` +
+          `<div class="item"><strong>Open point</strong><span>${a.open}</span></div>` +
+          `</div>` +
+          `</section>`;
+      }).join('');
+    }
+
+    populateFilters();
+    renderTokens();
+    renderAgents();
+  </script>
+</body>
+</html>
